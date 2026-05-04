@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Main-Class: io.github.sugar_studios.javaCapstoneProject.lwjgl3.Lwjgl3Lau
+ ncher
+
