@@ -275,14 +275,17 @@ public class GameScreen extends ScreenAdapter {
         EnemyPool.draw(batch);
         for (Token t : activeTokens) t.draw(batch);
         player.draw(batch);
+
         batch.end();
 
+        /*
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         player.drawDebug(shapeRenderer, Color.RED);
         player.drawSlashDebug(shapeRenderer, Color.ORANGE);
         for (Enemy e : EnemyPool.getActive()) e.drawDebug(shapeRenderer, Color.LIME);
         for (Token t : activeTokens) t.drawDebug(shapeRenderer, Color.YELLOW);
         shapeRenderer.end();
+        */
 
         backgroundLayer.renderForeground(batch);
 
