@@ -55,7 +55,8 @@ public class Player extends Entity {
     private static final float PLAYER_BULLET_SIZE = 32f;
     private static final float PLAYER_BULLET_SPEED = 2100f;
     private static final float PLAYER_BULLET_ACCELERATION = 1f;
-    private static final float PLAYER_BULLET_DAMAGE = 1f;
+    private static final float PLAYER_BULLET_DAMAGE = .25f;
+    private static final float PLAYER_FOCUS_BULLET_DAMAGE = 1f;
     private static final float SHOOT_COOLDOWN = 0.05f;
     private static final float SHOOT_COOLDOWN_FOCUS = SHOOT_COOLDOWN / 0.75f;
     private static final String PATH_PLAYER_BULLET = "projectiles/bullet11.png";
@@ -72,13 +73,13 @@ public class Player extends Entity {
     private static final String PATH_SLASH_END = "player/slash/end/attack_normal_end";
     private static final int SLASH_ACTIVE_FRAMES = 9;
     private static final int SLASH_END_FRAMES = 6;
-    private static final float SLASH_FRAME_DUR = 1f / 15f;
-    private static final float SLASH_END_FRAME_DUR = 1f / 15f;
+    private static final float SLASH_FRAME_DUR = 1f / 30f;
+    private static final float SLASH_END_FRAME_DUR = 1f / 30f;
     private static final int SLASH_HIT_FIRST = 1;
     private static final int SLASH_HIT_LAST = 4;
     private static final float SLASH_SPRITE_OFFSET_X = 0f;
     private static final float SLASH_SPRITE_OFFSET_Y = 20f;
-    private static final float[] SLASH_DAMAGE_BY_TIER = { 3f, 5f, 8f, 12f, 18f };
+    private static final float[] SLASH_DAMAGE_BY_TIER = { 8f, 12f, 18f, 22f, 27f };
     private static final int MAX_SWORD_TIER = 4;
     private static final float BLACK_METER_BASE = 100f;
     private static final float BLACK_METER_PER_TIER = 50f;
@@ -125,6 +126,7 @@ public class Player extends Entity {
     private float frameTimer = 0f;
 
     private boolean isFocused = false;
+    float baseDamage = 0f;
 
     private boolean isDashing = false;
     private float dashDirX = 0f;
@@ -543,27 +545,30 @@ public class Player extends Entity {
 
     private void tryShoot() {
         SfxPlayer.playShoot();
+        baseDamage = isFocused
+            ? PLAYER_FOCUS_BULLET_DAMAGE
+            : PLAYER_BULLET_DAMAGE;
         switch (shotTier) {
             case 0:
             case 1:
-                spawnBullet(SHOT_ANCHOR_CENTER, 90f, PLAYER_BULLET_DAMAGE);
+                spawnBullet(SHOT_ANCHOR_CENTER, 90f, baseDamage);
                 break;
             case 2:
-                spawnBullet(SHOT_ANCHOR_BOTTOM_LEFT, 90f, PLAYER_BULLET_DAMAGE);
-                spawnBullet(SHOT_ANCHOR_BOTTOM_RIGHT, 90f, PLAYER_BULLET_DAMAGE);
+                spawnBullet(SHOT_ANCHOR_BOTTOM_LEFT, 90f, baseDamage);
+                spawnBullet(SHOT_ANCHOR_BOTTOM_RIGHT, 90f, baseDamage);
                 break;
             case 3:
                 float homing3 = angleToNearestEnemy();
-                spawnBullet(SHOT_ANCHOR_BOTTOM_LEFT, 90f, PLAYER_BULLET_DAMAGE);
-                spawnBullet(SHOT_ANCHOR_CENTER, homing3, PLAYER_BULLET_DAMAGE * 0.25f);
-                spawnBullet(SHOT_ANCHOR_BOTTOM_RIGHT, 90f, PLAYER_BULLET_DAMAGE);
+                spawnBullet(SHOT_ANCHOR_BOTTOM_LEFT, 90f, baseDamage);
+                spawnBullet(SHOT_ANCHOR_CENTER, homing3, baseDamage * 0.25f);
+                spawnBullet(SHOT_ANCHOR_BOTTOM_RIGHT, 90f, baseDamage);
                 break;
             case 4:
                 float homing4 = angleToNearestEnemy();
-                spawnBullet(SHOT_ANCHOR_BOTTOM_LEFT, 90f, PLAYER_BULLET_DAMAGE);
-                spawnBullet(SHOT_ANCHOR_CENTER, homing4, PLAYER_BULLET_DAMAGE * 0.25f);
-                spawnBullet(SHOT_ANCHOR_CENTER, 90f, PLAYER_BULLET_DAMAGE);
-                spawnBullet(SHOT_ANCHOR_BOTTOM_RIGHT, 90f, PLAYER_BULLET_DAMAGE);
+                spawnBullet(SHOT_ANCHOR_BOTTOM_LEFT, 90f, baseDamage);
+                spawnBullet(SHOT_ANCHOR_CENTER, homing4, baseDamage * 0.25f);
+                spawnBullet(SHOT_ANCHOR_CENTER, 90f, baseDamage);
+                spawnBullet(SHOT_ANCHOR_BOTTOM_RIGHT, 90f, baseDamage);
                 break;
         }
         shootCooldownTimer = isFocused ? SHOOT_COOLDOWN_FOCUS : SHOOT_COOLDOWN;

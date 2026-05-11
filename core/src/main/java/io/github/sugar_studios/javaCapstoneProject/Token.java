@@ -3,7 +3,7 @@ package io.github.sugar_studios.javaCapstoneProject;
 import com.badlogic.gdx.graphics.Texture;
 
 // Collectible world object. Falls under gravity, collected on Player contact.
-// Hitbox and draw size are always TOKEN_SIZE x TOKEN_SIZE.
+// Hitbox is TOKEN_HITBOX_SIZE (2x TOKEN_SIZE). Sprite draws at TOKEN_SIZE centred on hitbox.
 // PURPLE tokens are always tier 1. All others can be tier 1-3.
 // Prefer update(float, Player) each frame; update(float) is gravity-only.
 public class Token extends GameObject {
@@ -20,11 +20,10 @@ public class Token extends GameObject {
     public static final String TEXTURE_PURPLE = "tokens/token_purple_1.png";
 
     public static final float TOKEN_SIZE = 50f;
+    public static final float TOKEN_HITBOX_SIZE = TOKEN_SIZE * 2f;
 
-    // Points granted per blue token tier.
     private static final int[] BLUE_SCORE_BY_TIER = { 100, 500, 1500 };
-    // Meter progress added per token tier for red and black tokens.
-    private static final float[] RED_PROGRESS_BY_TIER  = { 50f, 125f, 200f };
+    private static final float[] RED_PROGRESS_BY_TIER = { 50f, 125f, 200f };
     private static final float[] BLACK_PROGRESS_BY_TIER = { 25f, 40f, 70f };
 
     private static final float GRAVITY = -420f;
@@ -36,12 +35,11 @@ public class Token extends GameObject {
     private boolean active = true;
 
     public Token(float x, float y, Texture texture, TokenType type, int tier) {
-        super(x, y, TOKEN_SIZE, TOKEN_SIZE, texture);
+        super(x, y, TOKEN_HITBOX_SIZE, TOKEN_HITBOX_SIZE, texture);
         this.type = type;
         this.tier = tier;
     }
 
-    // Physics + contact check. Returns true the frame this token is collected.
     public boolean update(float deltaTime, Player player) {
         if (!active) return false;
         if (overlaps(player)) {
@@ -58,7 +56,13 @@ public class Token extends GameObject {
         applyGravity(deltaTime);
     }
 
-    // Fires this token's effect on the player (scaled by tier) then destroys itself.
+    @Override
+    public void draw(com.badlogic.gdx.graphics.g2d.Batch batch) {
+        if (texture == null) return;
+        float offset = (TOKEN_HITBOX_SIZE - TOKEN_SIZE) * 0.5f;
+        batch.draw(texture, rect.x + offset, rect.y + offset, TOKEN_SIZE, TOKEN_SIZE);
+    }
+
     public void collect(Player player) {
         if (!active) return;
         switch (type) {
@@ -81,7 +85,6 @@ public class Token extends GameObject {
         active = false;
     }
 
-    // Destroys without firing any effect (e.g. fell off-screen).
     public void deactivate() { active = false; }
 
     public TokenType getType() { return type; }

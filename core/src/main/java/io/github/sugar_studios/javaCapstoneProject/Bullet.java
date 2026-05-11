@@ -5,18 +5,11 @@ import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 
-/**
- * A projectile that moves in a fixed direction defined by an angle.
- * The bullet begins stationary, then accelerates toward a target velocity
- * (direction * speed) using a smoothing factor. Higher acceleration makes it
- * reach full speed faster.
- * Rotation follows its movement direction, and an optional delay can pause
- * motion before it starts.
- */
 public class Bullet extends GameObject {
 
     private final Faction faction;
-    private final float   damage;
+    private final float damage;
+    private final float spriteSize;
 
     private final Vector2 direction = new Vector2();
     private final Vector2 velocity = new Vector2();
@@ -35,7 +28,8 @@ public class Bullet extends GameObject {
         Faction faction, float damage, float speed,
         float angleDeg, float acceleration, float delayTime) {
 
-        super(x, y, w, h, texture);
+        super(x, y, w * hitboxRatio(faction, w), h * hitboxRatio(faction, w), texture);
+        this.spriteSize = w;
         this.faction = faction;
         this.damage = damage;
         this.acceleration = MathUtils.clamp(acceleration, 0f, 1f);
@@ -53,7 +47,8 @@ public class Bullet extends GameObject {
         Faction faction, float damage, float speed,
         GameObject target, float acceleration, float delayTime) {
 
-        super(x, y, w, h, texture);
+        super(x, y, w * hitboxRatio(faction, w), h * hitboxRatio(faction, w), texture);
+        this.spriteSize = w;
         this.faction = faction;
         this.damage = damage;
         this.acceleration = MathUtils.clamp(acceleration, 0f, 1f);
@@ -81,25 +76,31 @@ public class Bullet extends GameObject {
     @Override
     public void draw(Batch batch) {
         if (texture == null) return;
+        float offset = (spriteSize - rect.width) * 0.5f;
         batch.draw(texture,
-            rect.x, rect.y,
-            rect.width * 0.5f, rect.height * 0.5f,
-            rect.width, rect.height,
+            rect.x - offset, rect.y - offset,
+            spriteSize * 0.5f, spriteSize * 0.5f,
+            spriteSize, spriteSize,
             1f, 1f, rotation - 90f,
             0, 0, texture.getWidth(), texture.getHeight(),
             false, false);
     }
 
     public boolean isOffScreen(float worldWidth, float worldHeight) {
-        return rect.x + rect.width  < 0f || rect.x > worldWidth ||
+        return rect.x + rect.width < 0f || rect.x > worldWidth ||
             rect.y + rect.height < 0f || rect.y > worldHeight;
     }
 
-    public void  markForRemoval()      { markedForRemoval = true; }
-    public boolean isMarkedForRemoval(){ return markedForRemoval; }
-
+    public void markForRemoval() { markedForRemoval = true; }
+    public boolean isMarkedForRemoval() { return markedForRemoval; }
     public Faction getFaction() { return faction; }
-    public float   getDamage()  { return damage;  }
+    public float getDamage() { return damage; }
+
+    private static float hitboxRatio(Faction faction, float size) {
+        if (faction == Faction.PLAYER) return 1.0f;
+        if (size >= 90f) return 0.75f;
+        return 0.55f;
+    }
 
     private static Vector2 computeDirection(float sx, float sy, GameObject target) {
         Vector2 out = new Vector2();

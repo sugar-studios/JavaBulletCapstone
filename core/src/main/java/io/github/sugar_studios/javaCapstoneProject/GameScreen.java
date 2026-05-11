@@ -278,14 +278,23 @@ public class GameScreen extends ScreenAdapter {
 
         batch.end();
 
+
         /*
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         player.drawDebug(shapeRenderer, Color.RED);
         player.drawSlashDebug(shapeRenderer, Color.ORANGE);
         for (Enemy e : EnemyPool.getActive()) e.drawDebug(shapeRenderer, Color.LIME);
         for (Token t : activeTokens) t.drawDebug(shapeRenderer, Color.YELLOW);
+        Bullet[] bullets = BulletPool.getSlots();
+        for (int i = 0; i < BulletPool.CAPACITY; i++) {
+            Bullet b = bullets[i];
+            if (b == null || b.isMarkedForRemoval()) continue;
+            Color c = b.getFaction() == Faction.ENEMY ? Color.CYAN : Color.WHITE;
+            b.drawDebug(shapeRenderer, c);
+        }
         shapeRenderer.end();
         */
+
 
         backgroundLayer.renderForeground(batch);
 

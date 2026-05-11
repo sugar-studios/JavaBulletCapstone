@@ -25,15 +25,12 @@ import java.util.List;
 public class TokenSpawner {
 
     private static final float DECAY_RATIO = 0.70f;
-    private static final float CLUSTER_RADIUS = 80f;
+    private static final float CLUSTER_RADIUS = 55f;
     private static final int DEFAULT_COUNT = 5;
 
     private final ProbabilityQueue<TokenType> typeQueue;
-
-    // Outer key: type. Inner key: tier (1-3). PURPLE only has key 1.
     private final EnumMap<TokenType, Texture[]> textures;
 
-    // Build the texture map via buildTextures() rather than passing it in directly.
     public TokenSpawner(
         Texture blueT1, Texture blueT2, Texture blueT3,
         Texture redT1, Texture redT2, Texture redT3,
@@ -55,7 +52,6 @@ public class TokenSpawner {
         this.typeQueue = new ProbabilityQueue<>(slots, DECAY_RATIO, true);
     }
 
-    // Spawns count tokens scattered randomly within CLUSTER_RADIUS of (centerX, centerY).
     public List<Token> spawnTokens(float centerX, float centerY, int count) {
         if (count <= 0) throw new IllegalArgumentException("count must be > 0.");
         List<Token> spawned = new ArrayList<>(count);
@@ -66,8 +62,8 @@ public class TokenSpawner {
             Texture tex = textures.get(resolved)[tier - 1];
             float angle = MathUtils.random(MathUtils.PI2);
             float radius = MathUtils.random(CLUSTER_RADIUS);
-            float tx = centerX + MathUtils.cos(angle) * radius - Token.TOKEN_SIZE * 0.5f;
-            float ty = centerY + MathUtils.sin(angle) * radius - Token.TOKEN_SIZE * 0.5f;
+            float tx = centerX + MathUtils.cos(angle) * radius - Token.TOKEN_HITBOX_SIZE * 0.5f;
+            float ty = centerY + MathUtils.sin(angle) * radius - Token.TOKEN_HITBOX_SIZE * 0.5f;
             spawned.add(new Token(tx, ty, tex, resolved, tier));
         }
         return spawned;
