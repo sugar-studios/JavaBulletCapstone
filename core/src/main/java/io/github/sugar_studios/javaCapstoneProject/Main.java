@@ -38,7 +38,8 @@ public class Main extends Game {
         // generatorJP.dispose();
 
         //setScreen(new GameScreen(this));
-        setScreen(new CutsceneScreen(this, 0));
+        //setScreen(new CutsceneScreen(this, 0));
+        setScreen(new MainMenuScreen(this));
     }
 
     @Override

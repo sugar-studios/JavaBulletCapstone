@@ -18,12 +18,14 @@ public class VictoryScreen extends ScreenAdapter {
     private BitmapFont fontEN;
     private final Viewport viewport = new ScreenViewport();
     private final GlyphLayout layout = new GlyphLayout();
+    private final int score;
 
 
-    public VictoryScreen(Main game) {
+    public VictoryScreen(Main game, int score) {
         this.game = game;
         this.batch = game.getBatch();
         this.fontEN = game.getFontEN();
+        this.score = score;
     }
 
     @Override
@@ -39,7 +41,7 @@ public class VictoryScreen extends ScreenAdapter {
         batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
 
-        layout.setText(fontEN, "YOU WIN!!!");
+        layout.setText(fontEN, "YOU WIN!!!\n\nPoints: " + score);
 
         //font.draw(batch, "'ood 'ay mate", 100f, 100f);
 

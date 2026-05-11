@@ -17,7 +17,7 @@ import com.badlogic.gdx.utils.viewport.Viewport;
 public class LossScreen extends ScreenAdapter {
     private final Main game;
     private final Batch batch;
-    private BitmapFont fontEN;
+    private final BitmapFont fontEN;
     private final Viewport viewport = new ScreenViewport();
     private final GlyphLayout layout = new GlyphLayout();
     private final int score;

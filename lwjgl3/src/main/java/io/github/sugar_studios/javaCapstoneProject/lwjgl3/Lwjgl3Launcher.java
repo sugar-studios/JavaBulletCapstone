@@ -1,5 +1,4 @@
 package io.github.sugar_studios.javaCapstoneProject.lwjgl3;
-
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import io.github.sugar_studios.javaCapstoneProject.Main;
@@ -31,7 +30,7 @@ public class Lwjgl3Launcher {
         configuration.setWindowedMode(1920, 1080);
         //// You can change these files; they are in lwjgl3/src/main/resources/ .
         //// They can also be loaded from the root of assets/ .
-        configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
+        configuration.setWindowIcon("ui/icon128.png", "ui/icon64.png", "ui/icon32.png", "ui/icon16.png");
 
         //// This could improve compatibility with Windows machines with buggy OpenGL drivers, Macs
         //// with Apple Silicon that have to emulate compatibility with OpenGL anyway, and more.

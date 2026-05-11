@@ -14,7 +14,10 @@ public final class SfxPlayer {
     private static Sound kill1, kill2;
     private static Sound death, death2;
     private static Sound swordSwing, swordHit;
+    private static Sound collect1, collect2, collect3, collect4;
     private static Sound cutscene;
+
+    private static byte tempInt;
 
     private static boolean loaded = false;
 
@@ -28,6 +31,10 @@ public final class SfxPlayer {
         swordSwing = sound("swordSwing.wav");
         swordHit = sound("swordHit.wav");
         cutscene = sound("cutscene.wav");
+        collect1 = sound("collect.wav");
+        collect2 = sound("collect2.wav");
+        collect3 = sound("collect3.wav");
+        collect4 = sound("collect4.wav");
         loaded = true;
     }
 
@@ -42,6 +49,10 @@ public final class SfxPlayer {
         swordSwing.dispose();
         swordHit.dispose();
         cutscene.dispose();
+        collect1.dispose();
+        collect2.dispose();
+        collect3.dispose();
+        collect4.dispose();
         loaded = false;
     }
 
@@ -58,6 +69,25 @@ public final class SfxPlayer {
     public static void playDeath() {
         if (!loaded) return;
         (MathUtils.randomBoolean() ? death : death2).play();
+    }
+
+    public static void playCollect() {
+        if (loaded) {
+            switch ((byte)(Math.random() * 4)) {
+                case 0:
+                    collect1.play();
+                    break;
+                case 1:
+                    collect2.play();
+                    break;
+                case 2:
+                    collect3.play();
+                    break;
+                default:
+                    collect4.play();
+                    break;
+            }
+        }
     }
 
     public static void playSwordSwing() { if (loaded) swordSwing.play(); }

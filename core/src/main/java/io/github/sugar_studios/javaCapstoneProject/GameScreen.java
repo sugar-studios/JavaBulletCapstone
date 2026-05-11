@@ -179,7 +179,7 @@ public class GameScreen extends ScreenAdapter {
 
         if (player.isAlive() && waveManager.isComplete()) {
             music.stop();
-            main.setScreen(new VictoryScreen(main));
+            main.setScreen(new VictoryScreen(main, score));
         }
         if (!player.isAlive()) {
             music.stop();

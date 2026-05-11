@@ -2,6 +2,8 @@ package io.github.sugar_studios.javaCapstoneProject;
 
 import com.badlogic.gdx.graphics.Texture;
 
+import static io.github.sugar_studios.javaCapstoneProject.SfxPlayer.playCollect;
+
 // Collectible world object. Falls under gravity, collected on Player contact.
 // Hitbox is TOKEN_HITBOX_SIZE (2x TOKEN_SIZE). Sprite draws at TOKEN_SIZE centred on hitbox.
 // PURPLE tokens are always tier 1. All others can be tier 1-3.
@@ -67,15 +69,19 @@ public class Token extends GameObject {
         if (!active) return;
         switch (type) {
             case BLUE:
+                playCollect();
                 GameScreen.addScore(BLUE_SCORE_BY_TIER[tier - 1]);
                 break;
             case RED:
+                playCollect();
                 player.addRedProgress(RED_PROGRESS_BY_TIER[tier - 1]);
                 break;
             case BLACK:
+                playCollect();
                 player.addBlackProgress(BLACK_PROGRESS_BY_TIER[tier - 1]);
                 break;
             case PURPLE:
+                playCollect();
                 player.heal(1f);
                 GameScreen.addScore(2000);
                 break;

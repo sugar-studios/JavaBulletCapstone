@@ -103,7 +103,7 @@ public class CutsceneScreen extends ScreenAdapter {
         } else {
             switch (cur.type) {
                 case STILL:
-                    if (cur.input && Gdx.input.isKeyJustPressed(Input.Keys.Z)) {
+                    if (cur.input && Keybinds.isJustPressed(Keybinds.Action.SHOOT)) {
                         zPressed = true;
                         advance = true;
                     }
@@ -121,7 +121,7 @@ public class CutsceneScreen extends ScreenAdapter {
                             advance = true;
                         }
                     }
-                    if (cur.input && Gdx.input.isKeyJustPressed(Input.Keys.Z)) {
+                    if (cur.input && Keybinds.isJustPressed(Keybinds.Action.SHOOT)) {
                         zPressed = true;
                         advance = true;
                     }
