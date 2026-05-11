@@ -104,7 +104,7 @@ public class Player extends Entity {
     private static final float INVULN_FLICKER_SPEED = 30f;
 
     private static final float BOMB_MAX_SIZE = 1200f;
-    private static final float BOMB_DURATION = 3f;
+    private static final float BOMB_DURATION = 1f;
     private static final float BOMB_SPIN_SPEED = 720f;
 
     public enum Direction { FORWARD, BACKWARD, LEFT, RIGHT }

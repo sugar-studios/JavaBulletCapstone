@@ -86,7 +86,7 @@ public class GameScreen extends ScreenAdapter {
 
         music = Gdx.audio.newMusic(Gdx.files.internal(bgConfig.musicPath));
         music.setLooping(true);
-        music.setVolume(0.5f);
+        music.setVolume(0.25f);
         music.play();
 
         player = new Player(
