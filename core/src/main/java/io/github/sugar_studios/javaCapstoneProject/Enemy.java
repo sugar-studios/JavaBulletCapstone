@@ -4,43 +4,42 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.math.Vector2;
 
-/**
- * An enemy that follows waypoints and fires using a ShootBehavior.
- */
+// An enemy that follows waypoints and fires using a ShootBehavior.
 public class Enemy extends Entity {
 
     private final Vector2[] waypoints;
     private int waypointIndex;
-    private final float speed;
+    private final float[] segmentSpeeds;
     private final boolean isCheckpoint;
 
     private final ShootBehavior shootBehavior;
     private float shotTimer;
 
     private EnemyAnimData anim;
-    private Texture bulletTexture; // reference only — owned by EnemyAnimRegistry cache
-    private int idleFrame;
-    private float idleTimer;
-    private boolean isAttacking;
-    private int attackFrame;
-    private float attackTimer;
+    private Texture bulletTexture;
+    private int frame;
+    private float frameTimer;
 
     private boolean markedForRemoval;
 
-    public Enemy(Vector2[] waypoints, float speed, boolean isCheckpoint, ShootBehavior behavior, float health) {
+    public Enemy(Vector2[] waypoints, float[] segmentSpeeds, boolean isCheckpoint, ShootBehavior behavior, float health) {
         super(waypoints[0].x, waypoints[0].y, 0f, 0f, null, Faction.ENEMY, health);
         this.waypoints = waypoints;
         this.waypointIndex = 1;
-        this.speed = speed;
+        this.segmentSpeeds = segmentSpeeds;
         this.isCheckpoint = isCheckpoint;
         this.shootBehavior = behavior;
         this.shotTimer = (behavior != null) ? behavior.firstShotDelay : Float.MAX_VALUE;
     }
 
+    public Enemy(Vector2[] waypoints, float speed, boolean isCheckpoint, ShootBehavior behavior, float health) {
+        this(waypoints, new float[]{ speed }, isCheckpoint, behavior, health);
+    }
+
     public void initAnim(String animKey, String bulletPath) {
         anim = EnemyAnimRegistry.get(animKey != null ? animKey : "placeholder");
-        rect.width    = anim.displayW();
-        rect.height   = anim.displayH();
+        rect.width = anim.displayW();
+        rect.height = anim.displayH();
         bulletTexture = EnemyAnimRegistry.getBulletTexture(bulletPath);
     }
 
@@ -51,16 +50,12 @@ public class Enemy extends Entity {
         updateAnimation(delta);
     }
 
-    @Override
-    public void update(float delta) { update(delta, null); }
+    @Override public void update(float delta) { update(delta, null); }
 
     @Override
     public void draw(Batch batch) {
         if (anim == null) return;
-        Texture frame = (isAttacking && anim.hasAttackAnim())
-            ? anim.attackFrames()[attackFrame]
-            : anim.idleFrames()[idleFrame];
-        batch.draw(frame, rect.x, rect.y, rect.width, rect.height);
+        batch.draw(anim.frames()[frame], rect.x, rect.y, rect.width, rect.height);
     }
 
     private void updateMovement(float delta) {
@@ -68,6 +63,8 @@ public class Enemy extends Entity {
             if (!isCheckpoint) markedForRemoval = true;
             return;
         }
+        // Clamp so the last speed value covers any extra segments.
+        float speed = segmentSpeeds[Math.min(waypointIndex - 1, segmentSpeeds.length - 1)];
         Vector2 target = waypoints[waypointIndex];
         float dx = target.x - rect.x;
         float dy = target.y - rect.y;
@@ -93,46 +90,38 @@ public class Enemy extends Entity {
         }
     }
 
+    // Fires one or more bullets according to ShootBehavior mode.
+    // SPREAD and SPIN can produce multiple bullets per shot.
     private void fireBullet(Player player) {
         float size = shootBehavior.bulletSize;
-        float bx = rect.x + (rect.width  - size) / 2f;
+        float bx = rect.x + (rect.width - size) / 2f;
         float by = rect.y + (rect.height - size) / 2f;
-        Bullet b;
-        if (shootBehavior.aimsAtPlayer && player != null) {
-            b = new Bullet(bx, by, size, size, bulletTexture,
-                Faction.ENEMY, shootBehavior.damage, shootBehavior.bulletSpeed,
-                player, shootBehavior.acceleration, 0f);
-        } else {
-            b = new Bullet(bx, by, size, size, bulletTexture,
-                Faction.ENEMY, shootBehavior.damage, shootBehavior.bulletSpeed,
-                shootBehavior.fixedAngle, shootBehavior.acceleration, 0f);
-        }
-        BulletPool.add(b);
-        if (anim.hasAttackAnim()) {
-            isAttacking = true;
-            attackFrame = 0;
-            attackTimer = 0f;
+        float cx = rect.x + rect.width / 2f;
+        float cy = rect.y + rect.height / 2f;
+
+        float[] angles = shootBehavior.getFireAngles(player, cx, cy);
+        for (float angle : angles) {
+            BulletPool.add(new Bullet(
+                bx, by, size, size, bulletTexture,
+                Faction.ENEMY,
+                shootBehavior.damage,
+                shootBehavior.bulletSpeed,
+                angle,
+                shootBehavior.acceleration,
+                0f
+            ));
         }
     }
 
     private void updateAnimation(float delta) {
-        idleTimer += delta;
-        if (idleTimer >= anim.idleFrameDur() && anim.idleFrames().length > 1) {
-            idleTimer -= anim.idleFrameDur();
-            idleFrame = (idleFrame + 1) % anim.idleFrames().length;
-        }
-        if (!isAttacking || !anim.hasAttackAnim()) return;
-        attackTimer += delta;
-        if (attackTimer >= anim.attackFrameDur()) {
-            attackTimer -= anim.attackFrameDur();
-            attackFrame++;
-            if (attackFrame >= anim.attackFrames().length) {
-                isAttacking = false;
-                attackFrame = 0;
-            }
+        if (anim.frames().length <= 1) return;
+        frameTimer += delta;
+        if (frameTimer >= anim.frameDur()) {
+            frameTimer -= anim.frameDur();
+            frame = (frame + 1) % anim.frames().length;
         }
     }
 
     public boolean isMarkedForRemoval() { return markedForRemoval; }
-    public boolean isCheckpointEnemy()  { return isCheckpoint; }
+    public boolean isCheckpointEnemy() { return isCheckpoint; }
 }

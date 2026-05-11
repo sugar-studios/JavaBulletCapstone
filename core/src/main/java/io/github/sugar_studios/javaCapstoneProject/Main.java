@@ -37,7 +37,8 @@ public class Main extends Game {
         generatorEN.dispose();
         // generatorJP.dispose();
 
-        setScreen(new GameScreen(this));
+        //setScreen(new GameScreen(this));
+        setScreen(new CutsceneScreen(this, 0));
     }
 
     @Override

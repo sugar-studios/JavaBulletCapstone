@@ -12,7 +12,7 @@ import java.util.HashMap;
  */
 public final class EnemyAnimRegistry {
 
-    private static final HashMap<String, EnemyAnimData> registry  = new HashMap<>();
+    private static final HashMap<String, EnemyAnimData> registry   = new HashMap<>();
     private static final HashMap<String, Texture>       bulletCache = new HashMap<>();
 
     private EnemyAnimRegistry() {}
@@ -20,9 +20,7 @@ public final class EnemyAnimRegistry {
     public static void load() {
         registry.put("placeholder", makePlaceholder());
         registry.put("kitsune_big", loadFromPaths(
-            "enemies/kitsune_big/big_kitsune", 12, 1f / 12f,
-            null, 0, 0f,
-            96f, 96f));
+            "enemies/kitsune_big/big_kitsune", 12, 1f / 12f, 96f, 96f));
     }
 
     public static EnemyAnimData get(String key) {
@@ -34,23 +32,39 @@ public final class EnemyAnimRegistry {
         return d;
     }
 
-    // Bullet textures are cached here so they outlive the enemy that fired them.
     public static Texture getBulletTexture(String path) {
         if (path == null) return getPlaceholderBullet();
-        Texture t = bulletCache.get(path);
-        if (t == null) {
-            t = new Texture(Gdx.files.internal(path));
+        return bulletCache.computeIfAbsent(path, p -> {
+            Texture t = new Texture(Gdx.files.internal(p));
             t.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
-            bulletCache.put(path, t);
-        }
-        return t;
+            return t;
+        });
     }
 
     public static void dispose() {
-        for (EnemyAnimData d : registry.values()) d.dispose();
+        registry.values().forEach(EnemyAnimData::dispose);
         registry.clear();
-        for (Texture t : bulletCache.values()) if (t != null) t.dispose();
+        bulletCache.values().forEach(t -> { if (t != null) t.dispose(); });
         bulletCache.clear();
+    }
+
+    private static EnemyAnimData makePlaceholder() {
+        Pixmap pm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
+        pm.setColor(Color.RED);
+        pm.fill();
+        Texture t = new Texture(pm);
+        pm.dispose();
+        return new EnemyAnimData(new Texture[]{ t }, 0.1f, 32f, 32f);
+    }
+
+    private static EnemyAnimData loadFromPaths(
+        String basePath, int frameCount, float frameDur,
+        float displayW, float displayH) {
+        Texture[] frames = new Texture[frameCount];
+        for (int i = 0; i < frameCount; i++) {
+            frames[i] = load(basePath + (i + 1) + ".png");
+        }
+        return new EnemyAnimData(frames, frameDur, displayW, displayH);
     }
 
     private static Texture getPlaceholderBullet() {
@@ -62,34 +76,6 @@ public final class EnemyAnimRegistry {
             pm.dispose();
             return t;
         });
-    }
-
-    private static EnemyAnimData makePlaceholder() {
-        Pixmap pm = new Pixmap(32, 32, Pixmap.Format.RGBA8888);
-        pm.setColor(Color.RED);
-        pm.fill();
-        Texture idle = new Texture(pm);
-        pm.dispose();
-        return new EnemyAnimData(new Texture[]{ idle }, 0.1f, null, 0f, 32f, 32f);
-    }
-
-    private static EnemyAnimData loadFromPaths(
-        String idlePath, int idleCount, float idleDur,
-        String attackPath, int attackCount, float attackDur,
-        float displayW, float displayH) {
-
-        Texture[] idle = new Texture[idleCount];
-        for (int i = 0; i < idleCount; i++)
-            idle[i] = load(idlePath + (i + 1) + ".png");
-
-        Texture[] attack = null;
-        if (attackPath != null && attackCount > 0) {
-            attack = new Texture[attackCount];
-            for (int i = 0; i < attackCount; i++)
-                attack[i] = load(attackPath + (i + 1) + ".png");
-        }
-
-        return new EnemyAnimData(idle, idleDur, attack, attackDur, displayW, displayH);
     }
 
     private static Texture load(String path) {

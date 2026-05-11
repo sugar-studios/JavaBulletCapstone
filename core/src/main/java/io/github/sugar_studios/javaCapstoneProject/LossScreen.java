@@ -20,12 +20,14 @@ public class LossScreen extends ScreenAdapter {
     private BitmapFont fontEN;
     private final Viewport viewport = new ScreenViewport();
     private final GlyphLayout layout = new GlyphLayout();
+    private final int score;
 
 
-    public LossScreen(Main game) {
+    public LossScreen(Main game, int score) {
         this.game = game;
         this.batch = game.getBatch();
         this.fontEN = game.getFontEN();
+        this.score = score;
     }
 
     @Override
@@ -41,7 +43,7 @@ public class LossScreen extends ScreenAdapter {
         batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
 
-        layout.setText(fontEN, "YOU LOST :((\nPress R to play again");
+        layout.setText(fontEN, "YOU LOST\nYour score was " + score + "((\nPress R to play again");
 
         fontEN.draw(batch, layout, viewport.getWorldWidth() / 2 - layout.width / 2, viewport.getWorldHeight() / 2 - layout.height  + 100);
 

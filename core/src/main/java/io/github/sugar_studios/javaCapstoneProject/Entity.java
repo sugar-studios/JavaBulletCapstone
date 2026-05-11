@@ -24,6 +24,15 @@ public abstract class Entity extends GameObject {
         }
     }
 
+    /** Applies direct damage from a player sword slash. */
+    public void onSlashHit(float damage) {
+        currentHealth -= damage;
+    }
+
+    public void heal(float amount) {
+        currentHealth = Math.min(currentHealth + amount, maxHealth);
+    }
+
     public boolean isAlive()          { return currentHealth > 0f; }
     public float   getHealthPercent() { return currentHealth / maxHealth; }
     public Faction getFaction()       { return faction; }

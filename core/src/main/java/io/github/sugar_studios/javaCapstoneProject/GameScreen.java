@@ -1,6 +1,7 @@
 package io.github.sugar_studios.javaCapstoneProject;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -12,13 +13,13 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
-/**
- * Main gameplay screen that updates and renders all game systems.
- */
+// Main gameplay screen. Owns the game loop, all rendering, and collision resolution.
 public class GameScreen extends ScreenAdapter {
 
-    private static final float WORLD_WIDTH  = 1280f;
+    private static final float WORLD_WIDTH = 1280f;
     private static final float WORLD_HEIGHT = 720f;
 
     private static final float GAMEPLAY_FRACTION = 2f / 3f;
@@ -45,7 +46,6 @@ public class GameScreen extends ScreenAdapter {
     private final SpriteBatch batch;
     private final ShapeRenderer shapeRenderer;
     private final BitmapFont font;
-
     private final Main main;
 
     private FitViewport viewport;
@@ -53,10 +53,19 @@ public class GameScreen extends ScreenAdapter {
     private BackgroundLayer backgroundLayer;
     private Player player;
     private WaveManager waveManager;
+    private Music music;
 
     private int fitX, fitY, fitW, fitH;
     private int gameplayScissorX, gameplayScissorW;
     private int uiScissorX, uiScissorW;
+
+    private final List<Token> activeTokens = new ArrayList<>();
+    private TokenSpawner tokenSpawner;
+    private final java.util.Set<Enemy> slashHitEnemies = new java.util.HashSet<>();
+
+    private static int score = 0;
+
+    public static void addScore(int amount) { score += amount; }
 
     public GameScreen(Main main) {
         this.batch = (SpriteBatch) main.getBatch();
@@ -71,10 +80,19 @@ public class GameScreen extends ScreenAdapter {
         whitePixel = createWhitePixel();
         font.setColor(UI_TEXT_COLOR);
 
-        backgroundLayer = new BackgroundLayer(GAMEPLAY_WORLD_WIDTH, WORLD_HEIGHT, BACKGROUND_SCROLL_SPEED);
+        BackgroundConfig bgConfig = LevelData.getBackgroundConfig(START_LEVEL);
+        backgroundLayer = new BackgroundLayer(GAMEPLAY_WORLD_WIDTH, WORLD_HEIGHT, BACKGROUND_SCROLL_SPEED, bgConfig);
         backgroundLayer.load();
 
-        player = new Player(GAMEPLAY_WORLD_WIDTH / 2f - PLAYER_HITBOX_HALF_W, WORLD_HEIGHT/2f - PLAYER_HITBOX_HALF_H, GAMEPLAY_WORLD_WIDTH, WORLD_HEIGHT);
+        music = Gdx.audio.newMusic(Gdx.files.internal(bgConfig.musicPath));
+        music.setLooping(true);
+        music.setVolume(0.5f);
+        music.play();
+
+        player = new Player(
+            GAMEPLAY_WORLD_WIDTH / 2f - PLAYER_HITBOX_HALF_W,
+            WORLD_HEIGHT / 2f - PLAYER_HITBOX_HALF_H,
+            GAMEPLAY_WORLD_WIDTH, WORLD_HEIGHT);
 
         EnemyAnimRegistry.load();
 
@@ -83,6 +101,9 @@ public class GameScreen extends ScreenAdapter {
 
         waveManager = new WaveManager(LevelData.build());
         waveManager.startLevel(START_LEVEL);
+
+        loadTokenAssets();
+        SfxPlayer.load();
     }
 
     @Override
@@ -110,67 +131,126 @@ public class GameScreen extends ScreenAdapter {
         if (whitePixel != null) whitePixel.dispose();
         if (backgroundLayer != null) backgroundLayer.dispose();
         if (player != null) player.dispose();
+        if (music != null) { music.stop(); music.dispose(); }
         EnemyAnimRegistry.dispose();
         BulletPool.clear();
         EnemyPool.clear();
+        if (tokenSpawner != null) tokenSpawner.dispose();
+        SfxPlayer.dispose();
+    }
+
+    private void loadTokenAssets() {
+        tokenSpawner = new TokenSpawner(
+            new Texture(Gdx.files.internal(Token.TEXTURE_BLUE_T1)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_BLUE_T2)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_BLUE_T3)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_RED_T1)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_RED_T2)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_RED_T3)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_BLACK_T1)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_BLACK_T2)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_BLACK_T3)),
+            new Texture(Gdx.files.internal(Token.TEXTURE_PURPLE))
+        );
     }
 
     private void update(float delta) {
         player.update(delta);
         backgroundLayer.update(delta, player.getScrollMultiplier());
 
-        // Wave machine: may push new enemies into EnemyPool this frame
         waveManager.update(delta);
-
-        // Move enemies; each enemy may also push bullets into BulletPool
         EnemyPool.update(delta, player);
-
-        // Move bullets; evicts any that went off-screen or were pre-marked
         BulletPool.update(delta, GAMEPLAY_WORLD_WIDTH, WORLD_HEIGHT);
 
-        // Damage resolution — must run after both pools have moved
         handleCollisions();
 
-        //If player is still alive, and there are no more enemies, you win!
-        if (player.isAlive() && waveManager.isComplete()) {
-            main.setScreen(new VictoryScreen(main));
+        if (player.isBombActive()) clearEnemyBullets();
+
+        // Move tokens, resolve player contact, cull anything that has fallen off-screen.
+        Iterator<Token> it = activeTokens.iterator();
+        while (it.hasNext()) {
+            Token t = it.next();
+            t.update(delta, player);
+            if (!t.isActive() || t.rect.y + t.rect.height < 0) {
+                if (t.isActive()) t.deactivate();
+                it.remove();
+            }
         }
 
-        //If player died go to game over.
-        if(!player.isAlive()) {
-            main.setScreen(new LossScreen(main));
+        if (player.isAlive() && waveManager.isComplete()) {
+            music.stop();
+            main.setScreen(new VictoryScreen(main));
+        }
+        if (!player.isAlive()) {
+            music.stop();
+            main.setScreen(new LossScreen(main, score));
+            score = 0;
         }
     }
 
-    /**
-     * Resolves hits between bullets and their opposing faction.
-     * A bullet is marked for removal the instant a hit is detected, so it
-     * can only damage one target per frame.  The pool evicts it at the top
-     * of the next BulletPool.update() call
-     */
+    // Marks all enemy bullets for removal — called every frame while bomb is active.
+    private void clearEnemyBullets() {
+        Bullet[] bullets = BulletPool.getSlots();
+        for (int i = 0; i < BulletPool.CAPACITY; i++) {
+            Bullet b = bullets[i];
+            if (b != null && !b.isMarkedForRemoval() && b.getFaction() == Faction.ENEMY)
+                b.markForRemoval();
+        }
+    }
+
+    // One bullet hits one target per frame. Marks bullet for removal on contact,
+    // then spawns tokens at the enemy's centre if the hit was lethal.
+    // Also resolves sword slash: each enemy can only be hit once per swing.
     private void handleCollisions() {
         Bullet[] bullets = BulletPool.getSlots();
         ArrayList<Enemy> enemies = EnemyPool.getActive();
+
+        // Clear slash hit set at the start of each new swing.
+        if (player.isSlashJustStarted()) slashHitEnemies.clear();
+
+        // Sword slash vs enemies — one hit per enemy per swing.
+        if (player.isSlashHitboxActive()) {
+            com.badlogic.gdx.math.Rectangle slashRect = player.getSlashHitbox();
+            for (int j = 0; j < enemies.size(); j++) {
+                Enemy e = enemies.get(j);
+                if (!slashHitEnemies.contains(e) && !e.isMarkedForRemoval() && e.isAlive() && slashRect.overlaps(e.rect)) {
+                    e.onSlashHit(player.getSlashDamage());
+                    SfxPlayer.playSwordHit();
+                    slashHitEnemies.add(e);
+                    if (!e.isAlive()) {
+                        SfxPlayer.playKill();
+                        float cx = e.rect.x + e.rect.width * 0.5f;
+                        float cy = e.rect.y + e.rect.height * 0.5f;
+                        int tokenCount = (int) Math.ceil(e.getMaxHealth() * 0.25f);
+                        if (tokenCount > 0) activeTokens.addAll(tokenSpawner.spawnTokens(cx, cy, tokenCount));
+                    }
+                }
+            }
+        }
 
         for (int i = 0; i < BulletPool.CAPACITY; i++) {
             Bullet b = bullets[i];
             if (b == null || b.isMarkedForRemoval()) continue;
 
             if (b.getFaction() == Faction.ENEMY) {
-                //nemy bullet vs player
                 if (b.rect.overlaps(player.rect)) {
                     player.onBulletHit(b);
                     b.markForRemoval();
                 }
-
             } else {
-                //player bullet vs first enemy it overlaps
                 for (int j = 0; j < enemies.size(); j++) {
                     Enemy e = enemies.get(j);
                     if (!e.isMarkedForRemoval() && e.isAlive() && b.rect.overlaps(e.rect)) {
                         e.onBulletHit(b);
                         b.markForRemoval();
-                        break; // one bullet, one target
+                        if (!e.isAlive()) {
+                            SfxPlayer.playKill();
+                            float cx = e.rect.x + e.rect.width * 0.5f;
+                            float cy = e.rect.y + e.rect.height * 0.5f;
+                            int tokenCount = (int) Math.ceil(e.getMaxHealth() * 0.25f);
+                            if (tokenCount > 0) activeTokens.addAll(tokenSpawner.spawnTokens(cx, cy, tokenCount));
+                        }
+                        break;
                     }
                 }
             }
@@ -186,33 +266,32 @@ public class GameScreen extends ScreenAdapter {
 
         Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
 
-        //gameplay panel
+        // Gameplay panel
         Gdx.gl.glScissor(gameplayScissorX, fitY, gameplayScissorW, fitH);
         backgroundLayer.renderBackground(batch);
 
         batch.begin();
-        BulletPool.draw(batch); // bullets rendered behind everything
-        EnemyPool.draw(batch); // enemies
-        player.draw(batch); // player on top
+        BulletPool.draw(batch);
+        EnemyPool.draw(batch);
+        for (Token t : activeTokens) t.draw(batch);
+        player.draw(batch);
         batch.end();
 
-        /*
         shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
         player.drawDebug(shapeRenderer, Color.RED);
-        for (Enemy e : EnemyPool.getActive()) {
-            e.drawDebug(shapeRenderer, Color.LIME);
-        }
+        player.drawSlashDebug(shapeRenderer, Color.ORANGE);
+        for (Enemy e : EnemyPool.getActive()) e.drawDebug(shapeRenderer, Color.LIME);
+        for (Token t : activeTokens) t.drawDebug(shapeRenderer, Color.YELLOW);
         shapeRenderer.end();
-        */
 
         backgroundLayer.renderForeground(batch);
 
-        //UI panel
+        // UI panel
         Gdx.gl.glScissor(uiScissorX, fitY, uiScissorW, fitH);
         drawUiBackground();
         drawUiContent();
 
-        //divider
+        // Divider
         Gdx.gl.glScissor(fitX, fitY, fitW, fitH);
         drawDivider();
 
@@ -234,15 +313,18 @@ public class GameScreen extends ScreenAdapter {
         int currentHp = (int) player.getCurrentHealth();
         int maxHp = (int) player.getMaxHealth();
 
+        String shotPower = String.format("%.1f", player.getShotPowerDisplay());
+        String swordPower = String.format("%.1f", player.getSwordPowerDisplay());
+
         batch.begin();
         font.draw(batch, "SCORE", textX, topLineY);
-        font.draw(batch, "0", textX, topLineY - UI_LINE_HEIGHT);
+        font.draw(batch, String.valueOf(score), textX, topLineY - UI_LINE_HEIGHT);
         font.draw(batch, "LIVES", textX, topLineY - UI_LINE_HEIGHT * 3f);
         font.draw(batch, currentHp + " / " + maxHp, textX, topLineY - UI_LINE_HEIGHT * 4f);
         font.draw(batch, "SPIRIT POWER", textX, topLineY - UI_LINE_HEIGHT * 6f);
-        font.draw(batch, "1", textX, topLineY - UI_LINE_HEIGHT * 7f);
-        font.draw(batch, "SWORD POWER",  textX, topLineY - UI_LINE_HEIGHT * 8f);
-        font.draw(batch, "1", textX, topLineY - UI_LINE_HEIGHT * 9f);
+        font.draw(batch, shotPower, textX, topLineY - UI_LINE_HEIGHT * 7f);
+        font.draw(batch, "SWORD POWER", textX, topLineY - UI_LINE_HEIGHT * 8f);
+        font.draw(batch, swordPower, textX, topLineY - UI_LINE_HEIGHT * 9f);
         font.draw(batch, "STAGE", textX, topLineY - UI_LINE_HEIGHT * 12f);
         font.draw(batch, "1", textX, topLineY - UI_LINE_HEIGHT * 13f);
         batch.end();
